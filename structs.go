@@ -2,10 +2,10 @@ package main
 
 import (
   "strconv"
-  //"math"
- // "time"
+  "math"
   "regexp"
   "errors"
+  "strings"
 )
 
 type itemRequest struct {
@@ -43,18 +43,55 @@ type getResponse struct {
 	Points int `json:"points"`
 }
 
-func (request *receiptRequest) convertReceiptRequestToReceipt() (*receipt, error){
-  moneyMatcher, _ := regexp.Compile("^\\d+\\.\\d{2}$")
-  stringMatcher, _ := regexp.Compile("^[\\w\\s\\-&]+$")
+var moneyMatcher, _ = regexp.Compile("^\\d+\\.\\d{2}$")
+var stringMatcher, _ = regexp.Compile("^[\\w\\s\\-&]+$")
+var dateMatcher, _ = regexp.Compile("^\\d{4}-(0[1-9]|1[1,2])-(0[1-9]|[1,2][0-9]|3[0,1])$")
+var timeMatcher, _ = regexp.Compile("^([0,1][0-9]|2[0-3]):([0-5][0-9])$")
 
+func (request *receiptRequest) ValidateNonItems() (error) {
   if(!stringMatcher.MatchString(request.Retailer)){
-    return nil, errors.New("Retailer is not valid.")
+    return errors.New("Retailer is not valid.")
   }
 
   if(!moneyMatcher.MatchString(request.Total)){
-    return nil, errors.New("Total is not valid.")
+    return errors.New("Total is not valid.")
   }
 
+  if(!dateMatcher.MatchString(request.PurchaseDate)){
+    return errors.New("Date is not valid. Must be in format YYYY-MM-DD.")
+  }
+
+  // Check edge case of being in February with a day that is too large
+  date := strings.Split(request.PurchaseDate, "-")
+  if(date[1] == "02"){
+
+    // Here compiler didn't like "if(date[2][0] == "3")" and I don't have an environment set up to debug.
+    // So we hard code even more =)
+    if(date[2] == "30" || date[2] == "31"){
+      return errors.New("February does not have 30+ days.")
+    }
+
+    if(date[2] == "29"){
+      year, err := strconv.ParseFloat(date[0], 32)
+
+      if(err != nil){
+        return err
+      }
+
+      if(math.Mod(year, 4) != 0){
+        return errors.New("February only has 29 days during leap years.")
+      }
+    }
+  }
+
+  if(!timeMatcher.MatchString(request.PurchaseTime)){
+    return errors.New("Time is not valid. Must be in format HH:MM.")
+  }
+
+  return nil
+}
+
+func (request *receiptRequest) ValidateAndConvertItems() ([]item, error){
   if(len(request.Items) < 1){
     return nil, errors.New("Must have at least one item.")
   }
@@ -79,6 +116,22 @@ func (request *receiptRequest) convertReceiptRequestToReceipt() (*receipt, error
     }
 
     convertedItems = append(convertedItems, item{ShortDescription:myItem.ShortDescription, Price:price})
+  }
+
+  return convertedItems, nil
+}
+
+func (request *receiptRequest) convertReceiptRequestToReceipt() (*receipt, error){
+  err := request.ValidateNonItems()
+
+  if(err != nil){
+    return nil, err
+  }
+
+  convertedItems, err := request.ValidateAndConvertItems() 
+
+  if(err != nil){
+    return nil, err
   }
 
   total, err := strconv.ParseFloat(request.Total, 64)

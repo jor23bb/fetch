@@ -7,7 +7,7 @@ import (
 	"math"
 	"strings"
 	"regexp"
-	//"time"
+	"strconv"
 )
 
 var iLikeToCheat = false
@@ -22,6 +22,7 @@ func (newReceipt *receipt) calculatePoints(){
 		totalPoints += 5
 	}
 
+	// Get count of only alphanumeric characters in string
 	re := regexp.MustCompile(`[a-zA-Z0-9]`)
 	totalPoints += len(re.FindAllString(newReceipt.Retailer, -1))
 
@@ -42,7 +43,20 @@ func (newReceipt *receipt) calculatePoints(){
 		totalPoints += calculateItemDescriptionPoints(item)
 	}
 
-	//if()
+	date := strings.Split(newReceipt.PurchaseDate, "-")
+	day, _ := strconv.ParseFloat(date[2], 32)
+
+	if(math.Mod(day, 2) == 1){
+		totalPoints += 6
+	}
+
+	time := strings.Split(newReceipt.PurchaseTime, ":")
+	hour := time[0]
+	minute := time[1]
+
+	if(hour == "15" || (hour == "14" && minute != "00")){
+		totalPoints += 10
+	}
 
 	newReceipt.Points = totalPoints
 }
@@ -74,7 +88,7 @@ func getReceiptPointsById(context *gin.Context){
 	}
 }
 
-//GET curl http://localhost:8080/receipts/98f6f6e3-62c8-4722-8547-2cf13135ed1d/points
+//GET curl http://localhost:8080/receipts/59f2e769-9d31-4d02-a682-2b2a8978cd16/points
 
 
 func postReceipt(context *gin.Context){
@@ -88,7 +102,7 @@ func postReceipt(context *gin.Context){
 	newReceipt, err := request.convertReceiptRequestToReceipt()
 
 	if(err != nil){
-		context.IndentedJSON(http.StatusBadRequest, "The receipt is invalid." /*err.Error()*/ )
+		context.IndentedJSON(http.StatusBadRequest, err.Error() )
 		return
 	}
 
