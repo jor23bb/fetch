@@ -6,6 +6,7 @@ import (
 	"github.com/google/uuid"
 	"math"
 	"strings"
+	"regexp"
 	//"time"
 )
 
@@ -21,7 +22,8 @@ func (newReceipt *receipt) calculatePoints(){
 		totalPoints += 5
 	}
 
-	totalPoints += len(newReceipt.Retailer)
+	re := regexp.MustCompile(`[a-zA-Z0-9]`)
+	totalPoints += len(re.FindAllString(newReceipt.Retailer, -1))
 
 	if(math.Mod(newReceipt.Total, .25) == 0){
 		totalPoints += 25
@@ -72,7 +74,7 @@ func getReceiptPointsById(context *gin.Context){
 	}
 }
 
-//GET curl http://localhost:8080/receipts/67a2cba6-35de-4fc9-a616-0b49e42db11b/points
+//GET curl http://localhost:8080/receipts/98f6f6e3-62c8-4722-8547-2cf13135ed1d/points
 
 
 func postReceipt(context *gin.Context){
