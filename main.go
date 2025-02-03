@@ -43,6 +43,8 @@ func (newReceipt *receipt) calculatePoints(){
 		totalPoints += calculateItemDescriptionPoints(item)
 	}
 
+	// Could error check here again for date & time OOB exceptions / parse errors. But this is small enough I'm
+	// not worried about calling "CalculatePoints" independent of the Validate methods
 	date := strings.Split(newReceipt.PurchaseDate, "-")
 	day, _ := strconv.ParseFloat(date[2], 32)
 
@@ -88,9 +90,6 @@ func getReceiptPointsById(context *gin.Context){
 	}
 }
 
-//GET curl http://localhost:8080/receipts/59f2e769-9d31-4d02-a682-2b2a8978cd16/points
-
-
 func postReceipt(context *gin.Context){
 	var request receiptRequest
 
@@ -102,7 +101,8 @@ func postReceipt(context *gin.Context){
 	newReceipt, err := request.convertReceiptRequestToReceipt()
 
 	if(err != nil){
-		context.IndentedJSON(http.StatusBadRequest, err.Error() )
+		// In case you wanted to output a real error:
+		context.IndentedJSON(http.StatusBadRequest, "The receipt is invalid." /*err.Error()*/)
 		return
 	}
 

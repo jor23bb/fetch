@@ -19,20 +19,20 @@ type item struct {
 }
 
 type receiptRequest struct {
-  	Retailer string `json:"retailer"`
-  	PurchaseDate string `json:"purchaseDate"`
-  	PurchaseTime string `json:"purchaseTime"`
-  	Items []itemRequest `json:"items"`
-  	Total string `json:"total"`
+	Retailer string `json:"retailer"`
+	PurchaseDate string `json:"purchaseDate"`
+	PurchaseTime string `json:"purchaseTime"`
+	Items []itemRequest `json:"items"`
+	Total string `json:"total"`
 }
 
 type receipt struct {
-  	Points int `json:"points"`
-  	Retailer string `json:"retailer"`
-  	PurchaseDate string `json:"purchaseDate"`
-  	PurchaseTime string `json:"purchaseTime"`
-  	Items []item `json:"items"`
-  	Total float64 `json:"total"`
+	Points int `json:"points"`
+	Retailer string `json:"retailer"`
+	PurchaseDate string `json:"purchaseDate"`
+	PurchaseTime string `json:"purchaseTime"`
+	Items []item `json:"items"`
+	Total float64 `json:"total"`
 }
 
 type postResponse struct {
@@ -43,13 +43,20 @@ type getResponse struct {
 	Points int `json:"points"`
 }
 
+// From yml file
 var moneyMatcher, _ = regexp.Compile("^\\d+\\.\\d{2}$")
 var stringMatcher, _ = regexp.Compile("^[\\w\\s\\-&]+$")
+
+// Since googling how to handle dates / times in golang was getting irksome only the example formats
+// specified in the yml will be accepted (i.e. YYYY-MM-DD for PurchaseDate and HH:MM for PurchaseTime)
 var dateMatcher, _ = regexp.Compile("^\\d{4}-(0[1-9]|1[1,2])-(0[1-9]|[1,2][0-9]|3[0,1])$")
 var timeMatcher, _ = regexp.Compile("^([0,1][0-9]|2[0-3]):([0-5][0-9])$")
 
+// Validate everything other than the itemRequest objects
 func (request *receiptRequest) ValidateNonItems() (error) {
-  if(!stringMatcher.MatchString(request.Retailer)){
+  // I decided that all whitespace strings are not valid. A string made entirely of dashes is though. Does not have
+  // to contain an alphanumeric character, simply not be entirely whitespace and adhere to the regex defined in the yml
+  if(!stringMatcher.MatchString(request.Retailer) || len(strings.TrimSpace(request.Retailer)) == 0){
     return errors.New("Retailer is not valid.")
   }
 
@@ -65,8 +72,8 @@ func (request *receiptRequest) ValidateNonItems() (error) {
   date := strings.Split(request.PurchaseDate, "-")
   if(date[1] == "02"){
 
-    // Here compiler didn't like "if(date[2][0] == "3")" and I don't have an environment set up to debug.
-    // So we hard code even more =)
+    // Here the compiler didn't like "if(date[2][0] == "3")" or string(date[2])[0] and 
+    // I don't have an environment set up to debug. So we hard code even more =)
     if(date[2] == "30" || date[2] == "31"){
       return errors.New("February does not have 30+ days.")
     }
@@ -100,7 +107,9 @@ func (request *receiptRequest) ValidateAndConvertItems() ([]item, error){
 
   for _, myItem := range request.Items{
 
-    if (!stringMatcher.MatchString(myItem.ShortDescription)){
+    // I decided that all whitespace strings are not valid. A string made entirely of dashes is though. Does not have
+    // to contain an alphanumeric character, simply not be entirely whitespace and adhere to the regex defined in the yml
+    if (!stringMatcher.MatchString(myItem.ShortDescription) || len(strings.TrimSpace(myItem.ShortDescription)) == 0){
       return nil, errors.New("Description: " + myItem.ShortDescription + " is not valid.")
     }
 
@@ -140,6 +149,7 @@ func (request *receiptRequest) convertReceiptRequestToReceipt() (*receipt, error
     return nil, err
   }
 
+  // I'm sure there must be a better way in Go. Looking forward to learning what that is
   newReceipt := receipt{
     Points: 0, 
     Retailer: request.Retailer, 
