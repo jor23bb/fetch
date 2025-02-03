@@ -30,7 +30,7 @@ type receipt struct {
   	Points int `json:"points"`
   	Retailer string `json:"retailer"`
   	PurchaseDate string `json:"purchaseDate"`
-  	PurchaseTime float32 `json:"purchaseTime"`
+  	PurchaseTime string `json:"purchaseTime"`
   	Items []item `json:"items"`
   	Total float64 `json:"total"`
 }
@@ -71,7 +71,7 @@ func (request *receiptRequest) convertReceiptRequestToReceipt() (*receipt, error
       return nil, errors.New("Price: " + myItem.Price + " is not valid.")
     }
 
-    price, err := strconv.ParseFloat(myItem.Price, 32)
+    price, err := strconv.ParseFloat(myItem.Price, 64)
 
     // Shouldn't happen but why not
     if(err != nil){
@@ -81,21 +81,19 @@ func (request *receiptRequest) convertReceiptRequestToReceipt() (*receipt, error
     convertedItems = append(convertedItems, item{ShortDescription:myItem.ShortDescription, Price:price})
   }
 
-  /*input_date_layout := ""
-  output_date_layout := ""
-
-  input_time_layout := ""
-  output_time_layout := ""
-*/
-
   total, err := strconv.ParseFloat(request.Total, 64)
 
   if(err != nil){
     return nil, err
   }
 
-  newReceipt := receipt{Points: 0}
-  newReceipt.Total = total
+  newReceipt := receipt{
+    Points: 0, 
+    Retailer: request.Retailer, 
+    PurchaseDate: request.PurchaseDate, 
+    PurchaseTime: request.PurchaseTime,
+    Items: convertedItems,
+    Total: total}
 
   return &newReceipt, nil
 }

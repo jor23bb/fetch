@@ -5,6 +5,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"math"
+	"strings"
 	//"time"
 )
 
@@ -15,12 +16,12 @@ var receipts = make(map[string]receipt)
 func (newReceipt *receipt) calculatePoints(){
 	totalPoints := 0
 
-	totalPoints += len(newReceipt.Retailer)
-
 	// Is this a common problem these days?
 	if(iLikeToCheat && newReceipt.Total > 10){
 		totalPoints += 5
 	}
+
+	totalPoints += len(newReceipt.Retailer)
 
 	if(math.Mod(newReceipt.Total, .25) == 0){
 		totalPoints += 25
@@ -33,9 +34,22 @@ func (newReceipt *receipt) calculatePoints(){
 		totalPoints += 50
 	}
 
+	totalPoints += 5 * (len(newReceipt.Items) / 2)
+
+	for _, item := range newReceipt.Items{
+		totalPoints += calculateItemDescriptionPoints(item)
+	}
+
 	//if()
 
 	newReceipt.Points = totalPoints
+}
+
+func calculateItemDescriptionPoints(currItem item) int{
+	if(math.Mod(float64(len(strings.TrimSpace(currItem.ShortDescription))), 3) == 0){
+		return int(math.Ceil(currItem.Price * .2))
+	}
+	return 0
 }
 
 func main() {
@@ -58,7 +72,7 @@ func getReceiptPointsById(context *gin.Context){
 	}
 }
 
-//GET curl http://localhost:8080/receipts/52759901-ab16-47d5-8b6c-a0907e099da1/points
+//GET curl http://localhost:8080/receipts/67a2cba6-35de-4fc9-a616-0b49e42db11b/points
 
 
 func postReceipt(context *gin.Context){
@@ -72,7 +86,7 @@ func postReceipt(context *gin.Context){
 	newReceipt, err := request.convertReceiptRequestToReceipt()
 
 	if(err != nil){
-		context.IndentedJSON(http.StatusBadRequest, "The receipt is invalid."/*err.Error()*/)
+		context.IndentedJSON(http.StatusBadRequest, "The receipt is invalid." /*err.Error()*/ )
 		return
 	}
 
